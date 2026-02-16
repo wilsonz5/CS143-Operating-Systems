@@ -3,6 +3,7 @@
 # Members: Darren Hu, Save Soukkaseum, Wilson Zheng
 
 from collections import deque
+import heapq
 
 # PID is just an integer, but it is used to make it clear when a integer is expected to be a valid PID.
 PID = int
@@ -48,7 +49,8 @@ class Kernel:
         self.level_ticks = 0
 
         # queues
-        self.ready_queue = deque()              # FCFS/Priority/RR single queue
+        self.ready_queue = deque()              # RR Single queue
+        self.priority_queue = []                # Priority Queue (min-heap)
         self.fg_queue = deque()                 # Multilevel's Foreground (RR)
         self.bg_queue = deque()                 # Multilevel's Background (FCFS)
 
@@ -64,29 +66,32 @@ class Kernel:
         pcb.priority = priority
         pcb.process_type = process_type
 
-        if self.scheduling_algorithm in ["FCFS", "RR", "Priority"]:
-            self.ready_queue.append(pcb)
+        if self.scheduling_algorithm == "Priority":
+            heapq.heappush(self.priority_queue, (pcb.priority, pcb.pid, pcb))
 
+            # if cpu is idle, run the new process immediately
+            if self.running.pid == 0:
+                self.running = self.choose_next_process()
+                return self.running.pid
+            
+            # preempt if new process has higher priority than currently running process
+            if (pcb.priority < self.running.priority) or (pcb.priority == self.running.priority and pcb.pid < self.running.pid):
+                heapq.heappush(self.priority_queue, (self.running.priority, self.running.pid, self.running))
+                self.running = self.choose_next_process()
+        elif self.scheduling_algorithm == "RR":
+            # TODO: RR scheduling later
+            self.ready_queue.append(pcb)
         elif self.scheduling_algorithm == "Multilevel":
+            # TODO: Multilevel scheduling later
             if process_type == "Foreground":
                 self.fg_queue.append(pcb)
             else: # process_type == "Background"
                 self.bg_queue.append(pcb)
 
-        # Decide if we should schedule immediately or not
-
-        # If the CPU is idle, start running the new process immediately.
+        # universal behavior: if cpu is idle, run the new process immediately
         if self.running.pid == 0:
-            next_pcb = self.choose_next_process()
-            self.running = next_pcb
-            return self.running.pid
+            self.running = self.choose_next_process()
 
-        # if priority scheduler, prempt if higher priority arrives
-        if self.scheduling_algorithm == "Priority":
-            if (pcb.priority < self.running.priority) or (pcb.priority == self.running.priority and pcb.pid < self.running.pid):
-                self.ready_queue.append(self.running)
-                next_pcb = self.choose_next_process()
-                self.running = next_pcb
         return self.running.pid
 
 
@@ -105,28 +110,10 @@ class Kernel:
     # It is not required to actually use this method but it is recommended.
     def choose_next_process(self):
         if self.scheduling_algorithm == "Priority":
-            if len(self.ready_queue) == 0:
+            if len(self.priority_queue) == 0:
                 return self.idle_pcb
-
-            # Convert deque to list so we can index
-            rq_list = list(self.ready_queue)
-
-            best_index = 0
-            for i in range(1, len(rq_list)):
-                if rq_list[i].priority < rq_list[best_index].priority:
-                    best_index = i
-                elif (
-                    rq_list[i].priority == rq_list[best_index].priority
-                    and rq_list[i].pid < rq_list[best_index].pid
-                ):
-                    best_index = i
-
-            best_pcb = rq_list.pop(best_index)
-
-            # rebuild deque without the chosen process
-            self.ready_queue = deque(rq_list)
-
-            return best_pcb
+            _, _, next_pcb = heapq.heappop(self.priority_queue)
+            return next_pcb
 
         # TODO:
         # RR / Multilevel later

@@ -64,28 +64,38 @@ class Kernel:
         pcb.priority = priority
         pcb.process_type = process_type
 
-        # insert process into the correct queue
-        if self.scheduling_algorithm == "Multilevel":
+        if self.scheduling_algorithm in ["FCFS", "RR", "Priority"]:
+            self.ready_queue.append(pcb)
+
+        elif self.scheduling_algorithm == "Multilevel":
             if process_type == "Foreground":
                 self.fg_queue.append(pcb)
-            else:
+            else: # process_type == "Background"
                 self.bg_queue.append(pcb)
-        else:
-            # not multilevel, just add to ready queue
-            self.ready_queue.append(pcb)
-            
+
+        # Decide if we should schedule immediately or not
+
+        # If the CPU is idle, start running the new process immediately.
+        if self.running.pid == 0:
+            next_pcb = self.choose_next_process()
+            self.running = next_pcb
+            return self.running.pid
+
+        # if priority scheduler, prempt if higher priority arrives
+        if self.scheduling_algorithm == "Priority":
+            if (pcb.priority < self.running.priority) or (pcb.priority == self.running.priority and pcb.pid < self.running.pid):
+                self.ready_queue.append(self.running)
+                next_pcb = self.choose_next_process()
+                self.running = next_pcb
         return self.running.pid
+
 
     # This method is triggered every time the current process performs an exit syscall.
     # DO NOT rename or delete this method. DO NOT change its arguments.
     def syscall_exit(self) -> PID:
         # current process is exiting, choose next process to run
-        if len(self.ready_queue) > 0:
-            # pick the first process in the ready queue
-            self.running = self.ready_queue.popleft()
-        else:
-            # no processes are in ready, return to idle
-            self.running = self.idle_pcb
+        next_pcb = self.choose_next_process()
+        self.running = next_pcb
         return self.running.pid
     
 
@@ -94,21 +104,42 @@ class Kernel:
     # Feel free to modify this method as you see fit.
     # It is not required to actually use this method but it is recommended.
     def choose_next_process(self):
-        if len(self.ready_queue) == 0:
+        if self.scheduling_algorithm == "Priority":
+            if len(self.ready_queue) == 0:
                 return self.idle_pcb
-        
-        if self.scheduling_algorithm == "FCFS":
-            self.running = self.ready_queue.popleft()
-        else:
-            print("Unknown scheduling algorithm")
-        
+
+            # Convert deque to list so we can index
+            rq_list = list(self.ready_queue)
+
+            best_index = 0
+            for i in range(1, len(rq_list)):
+                if rq_list[i].priority < rq_list[best_index].priority:
+                    best_index = i
+                elif (
+                    rq_list[i].priority == rq_list[best_index].priority
+                    and rq_list[i].pid < rq_list[best_index].pid
+                ):
+                    best_index = i
+
+            best_pcb = rq_list.pop(best_index)
+
+            # rebuild deque without the chosen process
+            self.ready_queue = deque(rq_list)
+
+            return best_pcb
+
+        # TODO:
+        # RR / Multilevel later
+        return self.running
 
     # This method is triggered when the currently running process requests to change its priority.
     # DO NOT rename or delete this method. DO NOT change its arguments.
     def syscall_set_priority(self, new_priority: int) -> PID:
         self.running.priority = new_priority
-        self.choose_next_process()
+        next_pcb = self.choose_next_process()
+        self.running = next_pcb
         return self.running.pid
+
 
     # This function represents the hardware timer interrupt.
     # It is triggered every 10 milliseconds and is the only way a kernel can track passing time.

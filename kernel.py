@@ -78,9 +78,11 @@ class Kernel:
             if (pcb.priority < self.running.priority) or (pcb.priority == self.running.priority and pcb.pid < self.running.pid):
                 heapq.heappush(self.priority_queue, (self.running.priority, self.running.pid, self.running))
                 self.running = self.choose_next_process()
+
         elif self.scheduling_algorithm == "RR":
-            # TODO: RR scheduling later
             self.ready_queue.append(pcb)
+            if self.running.pid == 0:
+                self.running = self.choose_next_process()
         elif self.scheduling_algorithm == "Multilevel":
             # TODO: Multilevel scheduling later
             if process_type == "Foreground":
@@ -114,9 +116,13 @@ class Kernel:
                 return self.idle_pcb
             _, _, next_pcb = heapq.heappop(self.priority_queue)
             return next_pcb
-
+        elif self.scheduling_algorithm == "RR":
+            if len(self.ready_queue) == 0:
+                return self.idle_pcb
+            self.rr_ticks = 0
+            return self.ready_queue.popleft()
         # TODO:
-        # RR / Multilevel later
+        # Multilevel later
         return self.running
 
     # This method is triggered when the currently running process requests to change its priority.
@@ -133,4 +139,18 @@ class Kernel:
     # Do not use real time to track how much time has passed as time is simulated.
     # DO NOT rename or delete this method. DO NOT change its arguments.
     def timer_interrupt(self) -> PID:
+        if self.scheduling_algorithm == "RR":
+            # if idle, nothing to do
+            if self.running.pid == 0:
+                return self.running.pid
+
+            self.rr_ticks += 1
+
+            # quantum = 4 ticks (40ms)
+            if self.rr_ticks >= 4:
+                # move current process to end of queue
+                self.ready_queue.append(self.running)
+                # pick next process
+                self.running = self.choose_next_process()
+
         return self.running.pid

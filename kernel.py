@@ -1,6 +1,6 @@
 ### Fill in the following information before submitting
-# Group id: 78618535, 34588968, 45441829
-# Members: Darren Hu, Save Soukkaseum, Wilson Zheng
+# Group id: 44
+# Members: Save Soukkaseum, Wilson Zheng
 
 from collections import deque
 import heapq

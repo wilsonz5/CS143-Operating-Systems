@@ -1,0 +1,34 @@
+0.000s : Foreground process 1 arrived with priority 40
+0.000s : Context switching to pid: 1
+
+0.023s : Foreground process 2 arrived with priority 35
+0.023s : Context switching to pid: 2
+
+0.086s : Process 2 has finished execution and is exiting
+0.086s : Context switching to pid: 1
+
+0.495s : Process 1 has finished execution and is exiting
+0.495s : Context switching to pid: 0
+
+1.000s : Foreground process 3 arrived with priority 35
+1.000s : Context switching to pid: 3
+
+1.023s : Foreground process 4 arrived with priority 5
+1.023s : Context switching to pid: 4
+
+1.033s : Foreground process 5 arrived with priority 44
+
+1.400s : Foreground process 6 arrived with priority 22
+
+1.678s : Process 4 has finished execution and is exiting
+1.678s : Context switching to pid: 6
+
+2.010s : Process 6 has finished execution and is exiting
+2.010s : Context switching to pid: 3
+
+2.047s : Process 3 has finished execution and is exiting
+2.047s : Context switching to pid: 5
+
+2.134s : Process 5 has finished execution and is exiting
+2.134s : Context switching to pid: 0
+

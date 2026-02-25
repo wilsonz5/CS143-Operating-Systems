@@ -1,0 +1,60 @@
+0.000s : Foreground process 1 arrived with priority 35
+0.000s : Context switching to pid: 1
+
+0.030s : Semaphore 0 initilized with value 3
+0.030s : Process 1 called p on semaphore 0
+0.030s : Foreground process 2 arrived with priority 40
+
+0.034s : Process 1 called p on semaphore 0
+
+0.057s : Process 1 called v on semaphore 0
+
+0.100s : Process 1 called p on semaphore 0
+
+0.110s : Process 1 set priority to 50
+0.110s : Context switching to pid: 2
+
+0.123s : Process 2 called p on semaphore 0
+
+0.132s : Process 2 called p on semaphore 0
+0.132s : Context switching to pid: 1
+
+0.142s : Process 1 called v on semaphore 0
+0.142s : Context switching to pid: 2
+
+0.150s : Foreground process 3 arrived with priority 2
+0.150s : Context switching to pid: 3
+
+0.180s : Process 3 called p on semaphore 0
+0.180s : Context switching to pid: 2
+
+0.195s : Process 2 called p on semaphore 0
+0.195s : Context switching to pid: 1
+
+0.200s : Foreground process 4 arrived with priority 2
+0.200s : Context switching to pid: 4
+
+0.230s : Process 4 called p on semaphore 0
+0.230s : Context switching to pid: 1
+
+0.625s : Process 1 called v on semaphore 0
+0.625s : Context switching to pid: 3
+
+0.645s : Process 3 called v on semaphore 0
+
+0.895s : Process 3 has finished execution and is exiting
+0.895s : Context switching to pid: 4
+
+0.915s : Process 4 called v on semaphore 0
+
+1.165s : Process 4 has finished execution and is exiting
+1.165s : Context switching to pid: 2
+
+1.170s : Process 2 called v on semaphore 0
+
+1.180s : Process 2 has finished execution and is exiting
+1.180s : Context switching to pid: 1
+
+1.360s : Process 1 has finished execution and is exiting
+1.360s : Context switching to pid: 0
+

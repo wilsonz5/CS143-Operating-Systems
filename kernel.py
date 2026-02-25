@@ -83,8 +83,8 @@ class Kernel:
             self.ready_queue.append(pcb)
             if self.running.pid == 0:
                 self.running = self.choose_next_process()
+
         elif self.scheduling_algorithm == "Multilevel":
-            # TODO: Multilevel scheduling later
             if process_type == "Foreground":
                 self.fg_queue.append(pcb)
             else: # process_type == "Background"
@@ -100,9 +100,8 @@ class Kernel:
     # This method is triggered every time the current process performs an exit syscall.
     # DO NOT rename or delete this method. DO NOT change its arguments.
     def syscall_exit(self) -> PID:
-        # current process is exiting, choose next process to run
-        next_pcb = self.choose_next_process()
-        self.running = next_pcb
+        self.running = self.idle_pcb
+        self.running = self.choose_next_process()
         return self.running.pid
     
 
@@ -121,16 +120,56 @@ class Kernel:
                 return self.idle_pcb
             self.rr_ticks = 0
             return self.ready_queue.popleft()
-        # TODO:
-        # Multilevel later
-        return self.running
+        elif self.scheduling_algorithm == "Multilevel":
+            if self.current_level == "Foreground":
+                if len(self.fg_queue) == 0:
+                    if len(self.bg_queue) == 0:
+                        return self.idle_pcb
+                    self.current_level = "Background"
+                    self.level_ticks = 0
+                    return self.bg_queue.popleft()
+
+                self.rr_ticks = 0
+                return self.fg_queue.popleft()
+
+            else:  # Background
+                if len(self.bg_queue) == 0:
+                    if len(self.fg_queue) == 0:
+                        return self.idle_pcb
+                    self.current_level = "Foreground"
+                    self.level_ticks = 0
+                    self.rr_ticks = 0
+                    return self.fg_queue.popleft()
+
+                return self.bg_queue.popleft()
+
+
 
     # This method is triggered when the currently running process requests to change its priority.
     # DO NOT rename or delete this method. DO NOT change its arguments.
     def syscall_set_priority(self, new_priority: int) -> PID:
+        if self.scheduling_algorithm != "Priority":
+            self.running.priority = new_priority
+            return self.running.pid
+
+        # Update running process priority
         self.running.priority = new_priority
-        next_pcb = self.choose_next_process()
-        self.running = next_pcb
+
+        # Check if someone else should run
+        if len(self.priority_queue) > 0:
+            top_priority, top_pid, top_pcb = self.priority_queue[0]
+
+            if (top_priority < self.running.priority) or \
+            (top_priority == self.running.priority and top_pid < self.running.pid):
+
+                # Preempt running process
+                heapq.heappush(
+                    self.priority_queue,
+                    (self.running.priority, self.running.pid, self.running)
+                )
+
+                self.running = self.choose_next_process()
+
         return self.running.pid
 
 
@@ -152,5 +191,41 @@ class Kernel:
                 self.ready_queue.append(self.running)
                 # pick next process
                 self.running = self.choose_next_process()
+
+        elif self.scheduling_algorithm == "Multilevel":
+            if self.running.pid == 0:
+                return self.running.pid
+
+            self.level_ticks += 1
+
+            # Foreground (RR)
+            if self.current_level == "Foreground":
+                self.rr_ticks += 1
+
+                # Level switch has priority over RR
+                if self.level_ticks >= 20 and len(self.bg_queue) > 0:
+                    self.fg_queue.append(self.running)
+                    self.current_level = "Background"
+                    self.level_ticks = 0
+                    self.rr_ticks = 0
+                    self.running = self.choose_next_process()
+                    return self.running.pid
+
+                # RR quantum = 4 ticks
+                if self.rr_ticks >= 4:
+                    self.fg_queue.append(self.running)
+                    self.running = self.choose_next_process()
+                    return self.running.pid
+
+            else:  # Background (FCFS)
+                # 1️Level switch back to FG after 20 ticks if FG has work
+                if self.level_ticks >= 20 and len(self.fg_queue) > 0:
+                    self.bg_queue.appendleft(self.running)  # FCFS → resume later
+                    self.current_level = "Foreground"
+                    self.level_ticks = 0
+                    self.rr_ticks = 0
+                    self.running = self.choose_next_process()
+                    return self.running.pid
+
 
         return self.running.pid

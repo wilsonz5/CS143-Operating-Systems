@@ -1,0 +1,103 @@
+0.000s : Foreground process 1 arrived with priority 32
+0.000s : Context switching to pid: 1
+
+0.030s : Mutex 0 initilized
+0.030s : Process 1 called lock on mutex 0
+0.030s : Foreground process 2 arrived with priority 32
+
+0.040s : Context switching to pid: 2
+
+0.050s : Process 2 called lock on mutex 0
+0.050s : Context switching to pid: 1
+
+0.060s : Foreground process 3 arrived with priority 32
+0.060s : Foreground process 4 arrived with priority 32
+
+0.080s : Context switching to pid: 3
+
+0.110s : Mutex 2 initilized
+0.110s : Process 3 called lock on mutex 2
+
+0.120s : Context switching to pid: 4
+
+0.150s : Process 4 called lock on mutex 2
+0.150s : Context switching to pid: 1
+
+0.180s : Mutex 1 initilized
+0.180s : Process 1 called lock on mutex 1
+0.180s : Context switching to pid: 3
+
+0.217s : Process 3 called lock on mutex 0
+0.217s : Context switching to pid: 1
+
+0.417s : Process 1 called unlock on mutex 0
+
+0.450s : Context switching to pid: 2
+
+0.490s : Process 2 called unlock on mutex 0
+0.490s : Context switching to pid: 1
+
+0.530s : Context switching to pid: 3
+
+0.570s : Context switching to pid: 2
+
+0.580s : Process 2 has finished execution and is exiting
+0.580s : Context switching to pid: 1
+
+0.610s : Context switching to pid: 3
+
+0.643s : Process 3 called unlock on mutex 2
+
+0.650s : Context switching to pid: 1
+
+0.690s : Context switching to pid: 4
+
+0.730s : Context switching to pid: 3
+
+0.770s : Context switching to pid: 1
+
+0.810s : Context switching to pid: 4
+
+0.850s : Context switching to pid: 3
+
+0.853s : Process 3 called unlock on mutex 0
+
+0.890s : Context switching to pid: 1
+
+0.907s : Process 1 called unlock on mutex 1
+
+0.930s : Context switching to pid: 4
+
+0.970s : Context switching to pid: 3
+
+1.010s : Context switching to pid: 1
+
+1.050s : Context switching to pid: 4
+
+1.090s : Context switching to pid: 3
+
+1.113s : Process 3 has finished execution and is exiting
+1.113s : Context switching to pid: 1
+
+1.150s : Context switching to pid: 4
+
+1.160s : Process 4 called unlock on mutex 2
+
+1.161s : Process 4 called lock on mutex 1
+
+1.190s : Context switching to pid: 1
+
+1.230s : Context switching to pid: 4
+
+1.270s : Context switching to pid: 1
+
+1.310s : Context switching to pid: 4
+
+1.339s : Process 4 called unlock on mutex 1
+
+1.340s : Process 4 has finished execution and is exiting
+1.340s : Context switching to pid: 1
+
+1.360s : Process 1 has finished execution and is exiting
+1.360s : Context switching to pid: 0
+

@@ -93,6 +93,11 @@ class Kernel:
                 self.fg_queue.append(pcb)
             else: # process_type == "Background"
                 self.bg_queue.append(pcb)
+            
+        elif self.scheduling_algorithm == "FCFS":
+            self.ready_queue.append(pcb)
+            if self.running.pid == 0:
+                self.running = self.choose_next_process()
 
         # universal behavior: if cpu is idle, run the new process immediately
         if self.running.pid == 0:
@@ -114,11 +119,16 @@ class Kernel:
     # Feel free to modify this method as you see fit.
     # It is not required to actually use this method but it is recommended.
     def choose_next_process(self):
+        
         if self.scheduling_algorithm == "Priority":
             if len(self.priority_queue) == 0:
                 return self.idle_pcb
             _, _, next_pcb = heapq.heappop(self.priority_queue)
             return next_pcb
+        elif self.scheduling_algorithm == "FCFS":
+            if len(self.ready_queue) == 0:
+                return self.idle_pcb
+            return self.ready_queue.popleft()
         elif self.scheduling_algorithm == "RR":
             if len(self.ready_queue) == 0:
                 return self.idle_pcb
@@ -144,7 +154,6 @@ class Kernel:
                     self.level_ticks = 0
                     self.rr_ticks = 0
                     return self.fg_queue.popleft()
-
                 return self.bg_queue.popleft()
 
 
@@ -182,6 +191,9 @@ class Kernel:
     # Do not use real time to track how much time has passed as time is simulated.
     # DO NOT rename or delete this method. DO NOT change its arguments.
     def timer_interrupt(self) -> PID:
+        # FCFS must never be time-preempted
+        if self.scheduling_algorithm == "FCFS":
+            return self.running.pid
         if self.scheduling_algorithm == "RR":
             # if idle, nothing to do
             if self.running.pid == 0:
@@ -260,7 +272,10 @@ class Kernel:
         if sem["value"] <= 0:
             pcb = self.select_unblock_process(sem["wait"])
             if pcb:
-                self.add_to_ready(pcb)
+                if self.scheduling_algorithm == "FCFS":
+                    self.add_to_ready(pcb, front=True)
+                else:
+                    self.add_to_ready(pcb)
 
                 # Preemption rules
                 if self.scheduling_algorithm == "Priority":
@@ -305,7 +320,10 @@ class Kernel:
 
             # Transfer lock to unblocked process
             mutex["owner"] = pcb.pid
-            self.add_to_ready(pcb)
+            if self.scheduling_algorithm == "FCFS":
+                self.add_to_ready(pcb, front=True)
+            else:
+                self.add_to_ready(pcb)
 
             # Priority preemption check
             if self.scheduling_algorithm == "Priority":
@@ -329,26 +347,25 @@ class Kernel:
         return self.running.pid
 
 
-    def add_to_ready(self, pcb: PCB):
+    def add_to_ready(self, pcb: PCB, front=False):
         if self.scheduling_algorithm == "Priority":
             heapq.heappush(self.priority_queue, (pcb.priority, pcb.pid, pcb))
         elif self.scheduling_algorithm == "RR":
             self.ready_queue.append(pcb)
         elif self.scheduling_algorithm == "FCFS":
-            if len(self.ready_queue) == 0:
-                return self.idle_pcb
-            return self.ready_queue.popleft()
+            if front:
+                self.ready_queue.appendleft(pcb)
+            else:
+                self.ready_queue.append(pcb)
 
     def select_unblock_process(self, wait_list):
         if not wait_list:
             return None
 
         if self.scheduling_algorithm == "Priority":
-            # highest priority = lowest number
             best = min(wait_list, key=lambda pcb: (pcb.priority, pcb.pid))
-        else:
-            # FCFS and RR → lowest PID
-            best = min(wait_list, key=lambda pcb: pcb.pid)
+            wait_list.remove(best)
+            return best
 
-        wait_list.remove(best)
-        return best
+        # FCFS and RR → arrival order
+        return wait_list.popleft()

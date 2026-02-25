@@ -229,3 +229,34 @@ class Kernel:
 
 
         return self.running.pid
+
+    # This method is triggered when the currently running process requests to initialize a new semaphore.
+    # DO NOT rename or delete this method. DO NOT change its arguments.
+    def syscall_init_semaphore(self, semaphore_id: int, initial_value: int):
+        return
+    
+    # This method is triggered when the currently running process calls p() on an existing semaphore.
+    # DO NOT rename or delete this method. DO NOT change its arguments.
+    def syscall_semaphore_p(self, semaphore_id: int) -> PID:
+        return self.running.pid
+
+    # This method is triggered when the currently running process calls v() on an existing semaphore.
+    # DO NOT rename or delete this method. DO NOT change its arguments.
+    def syscall_semaphore_v(self, semaphore_id: int) -> PID:
+        return self.running.pid 
+
+    # This method is triggered when the currently running process requests to initialize a new mutex.
+    # DO NOT rename or delete this method. DO NOT change its arguments.
+    def syscall_init_mutex(self, mutex_id: int):
+        return
+
+    # This method is triggered when the currently running process calls lock() on an existing mutex.
+    # DO NOT rename or delete this method. DO NOT change its arguments.
+    def syscall_mutex_lock(self, mutex_id: int) -> PID:
+        return self.running.pid 
+
+
+    # This method is triggered when the currently running process calls unlock() on an existing mutex.
+    # DO NOT rename or delete this method. DO NOT change its arguments.
+    def syscall_mutex_unlock(self, mutex_id: int) -> PID:
+        return self.running.pid 

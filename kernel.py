@@ -57,6 +57,10 @@ class Kernel:
         # for MLFQ
         self.current_level = "Foreground"
 
+        # for synchronization primitives
+        self.semaphores = {}    # sempahores = {semaphore_id: (value: int, wait: list[PCB])}
+        self.mutexes = {}       # mutexes = {mutex_id: (locked: bool, owner: PID|None, wait: list[PCB])}
+
 
     # This method is triggered every time a new process has arrived.
     # new_process is this process's PID.
@@ -233,30 +237,118 @@ class Kernel:
     # This method is triggered when the currently running process requests to initialize a new semaphore.
     # DO NOT rename or delete this method. DO NOT change its arguments.
     def syscall_init_semaphore(self, semaphore_id: int, initial_value: int):
+        self.semaphores[semaphore_id] = { "value": initial_value, "wait": deque() }
         return
     
     # This method is triggered when the currently running process calls p() on an existing semaphore.
     # DO NOT rename or delete this method. DO NOT change its arguments.
     def syscall_semaphore_p(self, semaphore_id: int) -> PID:
+        sem = self.semaphores[semaphore_id]
+        sem["value"] -= 1
+
+        if sem["value"] < 0:
+            return self.block_running_process(sem["wait"])
+
         return self.running.pid
 
     # This method is triggered when the currently running process calls v() on an existing semaphore.
     # DO NOT rename or delete this method. DO NOT change its arguments.
     def syscall_semaphore_v(self, semaphore_id: int) -> PID:
-        return self.running.pid 
+        sem = self.semaphores[semaphore_id]
+        sem["value"] += 1
+
+        if sem["value"] <= 0:
+            pcb = self.select_unblock_process(sem["wait"])
+            if pcb:
+                self.add_to_ready(pcb)
+
+                # Preemption rules
+                if self.scheduling_algorithm == "Priority":
+                    if (pcb.priority < self.running.priority) or \
+                    (pcb.priority == self.running.priority and pcb.pid < self.running.pid):
+                        heapq.heappush(self.priority_queue, (self.running.priority, self.running.pid, self.running))
+                        self.running = self.choose_next_process()
+
+                # FCFS → NON-PREEMPTIVE → do nothing
+                # RR → do nothing (will run when scheduled)
+
+        return self.running.pid
 
     # This method is triggered when the currently running process requests to initialize a new mutex.
     # DO NOT rename or delete this method. DO NOT change its arguments.
     def syscall_init_mutex(self, mutex_id: int):
-        return
+        self.mutexes[mutex_id] = { "locked": False, "owner": None, "wait": deque() }
 
     # This method is triggered when the currently running process calls lock() on an existing mutex.
     # DO NOT rename or delete this method. DO NOT change its arguments.
     def syscall_mutex_lock(self, mutex_id: int) -> PID:
-        return self.running.pid 
+        mutex = self.mutexes[mutex_id]
+
+        # If mutex is free → acquire and continue running
+        if not mutex["locked"]:
+            mutex["locked"] = True
+            mutex["owner"] = self.running.pid
+            return self.running.pid
+
+        # Otherwise → block current process
+        return self.block_running_process(mutex["wait"])
 
 
     # This method is triggered when the currently running process calls unlock() on an existing mutex.
     # DO NOT rename or delete this method. DO NOT change its arguments.
     def syscall_mutex_unlock(self, mutex_id: int) -> PID:
-        return self.running.pid 
+        mutex = self.mutexes[mutex_id]
+
+        # Only owner can unlock (simulator likely guarantees this)
+        if mutex["wait"]:
+            pcb = self.select_unblock_process(mutex["wait"])
+
+            # Transfer lock to unblocked process
+            mutex["owner"] = pcb.pid
+            self.add_to_ready(pcb)
+
+            # Priority preemption check
+            if self.scheduling_algorithm == "Priority":
+                if (pcb.priority < self.running.priority) or \
+                (pcb.priority == self.running.priority and pcb.pid < self.running.pid):
+                    heapq.heappush(self.priority_queue,
+                                (self.running.priority, self.running.pid, self.running))
+                    self.running = self.choose_next_process()
+        else:
+            mutex["locked"] = False
+            mutex["owner"] = None
+
+        return self.running.pid
+
+
+
+    def block_running_process(self, wait_list):
+        wait_list.append(self.running)
+        self.running = self.idle_pcb
+        self.running = self.choose_next_process()
+        return self.running.pid
+
+
+    def add_to_ready(self, pcb: PCB):
+        if self.scheduling_algorithm == "Priority":
+            heapq.heappush(self.priority_queue, (pcb.priority, pcb.pid, pcb))
+        elif self.scheduling_algorithm == "RR":
+            self.ready_queue.append(pcb)
+        elif self.scheduling_algorithm == "FCFS":
+            if len(self.ready_queue) == 0:
+                return self.idle_pcb
+            return self.ready_queue.popleft()
+
+    def select_unblock_process(self, wait_list):
+        if not wait_list:
+            return None
+
+        if self.scheduling_algorithm == "Priority":
+            # highest priority = lowest number
+            best = min(wait_list, key=lambda pcb: (pcb.priority, pcb.pid))
+        else:
+            # FCFS and RR → lowest PID
+            best = min(wait_list, key=lambda pcb: pcb.pid)
+
+        wait_list.remove(best)
+        return best
